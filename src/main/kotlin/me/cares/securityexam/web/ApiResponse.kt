@@ -16,5 +16,12 @@ data class ApiResponse<T> private constructor(
             )
         }
 
+        fun <T> ofError(status: HttpStatus, data: T? = null): ApiResponse<T> {
+            return ApiResponse(
+                status = status.name,
+                data = data
+            )
+        }
+
     }
 }

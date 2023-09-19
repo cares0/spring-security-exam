@@ -14,3 +14,12 @@ spring:
         show_sql: true
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
+
+  security:
+    user:
+      password: "{noop}1111"
+      name: user
+
+    authentication:
+      api:
+        login-url: "/accounts/login"
