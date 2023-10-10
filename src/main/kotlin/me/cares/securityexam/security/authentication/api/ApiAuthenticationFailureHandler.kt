@@ -1,4 +1,4 @@
-package me.cares.securityexam.security.authentication
+package me.cares.securityexam.security.authentication.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.http.HttpServletRequest

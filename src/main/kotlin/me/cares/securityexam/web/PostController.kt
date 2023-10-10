@@ -1,5 +1,6 @@
 package me.cares.securityexam.web
 
+import jakarta.servlet.http.HttpServletRequest
 import me.cares.securityexam.application.service.PostService
 import me.cares.securityexam.web.request.PostRegisterRequest
 import me.cares.securityexam.web.request.PostUpdateRequest
@@ -43,11 +44,14 @@ class PostController(
     fun updatePost(
         @PathVariable postId: Long,
         @RequestBody request: PostUpdateRequest,
+        httpServletRequest: HttpServletRequest,
     ): ApiResponse<Any> {
         postService.updatePost(
             postId = postId,
             updatedContent = request.content
         )
+
+        httpServletRequest.remoteAddr
 
         return ApiResponse.ofSuccess()
     }

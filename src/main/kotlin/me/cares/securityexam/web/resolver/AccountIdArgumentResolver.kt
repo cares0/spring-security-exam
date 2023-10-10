@@ -26,8 +26,10 @@ class AccountIdArgumentResolver : HandlerMethodArgumentResolver {
     ): Any {
         val principal = SecurityContextHolder.getContext().authentication.principal
 
-        if (principal is UUID) return principal
-        else throw UnsupportedPrincipalException()
-
+        return when (principal) {
+            is UUID -> principal
+            is String -> UUID.fromString(principal)
+            else -> throw UnsupportedPrincipalException()
+        }
     }
 }

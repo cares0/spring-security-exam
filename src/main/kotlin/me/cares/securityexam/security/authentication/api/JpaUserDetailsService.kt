@@ -1,4 +1,4 @@
-package me.cares.securityexam.security.authentication
+package me.cares.securityexam.security.authentication.api
 
 import me.cares.securityexam.persistence.AccountRepository
 import org.springframework.security.core.userdetails.UserDetails
@@ -14,6 +14,7 @@ class JpaUserDetailsService(
             ?: throw UsernameNotFoundException(email)
 
         return CustomUserDetails(
+            id = account.id,
             email = account.email,
             password = account.password,
             role = account.role,
