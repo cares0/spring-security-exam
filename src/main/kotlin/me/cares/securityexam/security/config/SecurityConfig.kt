@@ -1,12 +1,13 @@
 package me.cares.securityexam.security.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import jakarta.servlet.DispatcherType
 import me.cares.securityexam.persistence.AccountRepository
+import me.cares.securityexam.persistence.RefreshTokenRepository
+import me.cares.securityexam.security.TokenAuthenticationEntrypoint
+import me.cares.securityexam.security.authentication.api.*
+import me.cares.securityexam.security.authentication.token.*
 import me.cares.securityexam.security.requestwraping.ChangeToReReadableRequestFilter
-import me.cares.securityexam.security.authentication.ApiAuthenticationFailureHandler
-import me.cares.securityexam.security.authentication.ApiAuthenticationFilter
-import me.cares.securityexam.security.authentication.ApiAuthenticationSuccessHandler
-import me.cares.securityexam.security.authentication.JpaUserDetailsService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -14,12 +15,15 @@ import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.factory.PasswordEncoderFactories
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher
 import org.springframework.web.filter.GenericFilterBean
 
 @Configuration
@@ -27,6 +31,10 @@ import org.springframework.web.filter.GenericFilterBean
 class SecurityConfig(
     private val objectMapper: ObjectMapper,
     private val accountRepository: AccountRepository,
+    private val refreshTokenRepository: RefreshTokenRepository,
+
+    private val accessTokenManager: AccessTokenManager,
+    private val refreshTokenManager: RefreshTokenManager,
 
     @Value("\${spring.security.authentication.api.login-url}")
     private val apiAuthenticationUrl: String
@@ -39,12 +47,15 @@ class SecurityConfig(
         http.rememberMe { rememberMe -> rememberMe.disable() }
         http.httpBasic { httpBasic -> httpBasic.disable() }
 
-        http.addFilterBefore(changeToReReadableRequestFilter(), ApiAuthenticationFilter::class.java)
+        http.sessionManagement { sessionManagement ->
+            sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        }
 
         http.authorizeHttpRequests { authorize ->
+            authorize.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
             authorize.requestMatchers(apiAuthenticationUrl).permitAll()
-            authorize.requestMatchers("accounts/join").permitAll()
-            authorize.anyRequest().hasRole("USER")
+            authorize.requestMatchers("/accounts/join").permitAll()
+            authorize.anyRequest().hasAuthority("NORMAL")
         }
 
         http.authenticationManager(apiAuthenticationManager(http))
@@ -55,8 +66,13 @@ class SecurityConfig(
             .failureHandler(apiAuthenticationFailureHandler())
             .authenticationDetailsSource(WebAuthenticationDetailsSource())
 
-//        직접 필터 생성하는 경우
-//        http.addFilterBefore(apiAuthenticationFilter(http), UsernamePasswordAuthenticationFilter::class.java)
+
+        http.exceptionHandling { exceptionHandling ->
+            exceptionHandling.authenticationEntryPoint(authenticationEntrypoint())
+        }
+
+        http.addFilterBefore(changeToReReadableRequestFilter(), ApiAuthenticationFilter::class.java)
+        http.addFilterAfter(tokenAuthenticationFilter(http), ApiAuthenticationFilter::class.java)
 
         return http.build()
     }
@@ -66,29 +82,34 @@ class SecurityConfig(
         return PasswordEncoderFactories.createDelegatingPasswordEncoder()
     }
 
-//    직접 필터 생성하는 경우
-//    @Bean
-//    fun apiAuthenticationFilter(http: HttpSecurity): ApiAuthenticationFilter {
-//        val apiAuthenticationFilter = ApiAuthenticationFilter(objectMapper)
-//
-//        val authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder::class.java)
-//        authenticationManagerBuilder.userDetailsService(jpaUserDetailsService())
-//        val authenticationManager = authenticationManagerBuilder.build()
-//
-//        apiAuthenticationFilter.setAuthenticationManager(authenticationManager)
-//        apiAuthenticationFilter.setRequiresAuthenticationRequestMatcher(
-//            AntPathRequestMatcher(apiAuthenticationUrl, "POST")
-//        )
-//        apiAuthenticationFilter.setAuthenticationSuccessHandler(apiAuthenticationSuccessHandler())
-//        apiAuthenticationFilter.setAuthenticationFailureHandler(apiAuthenticationFailureHandler())
-//        return apiAuthenticationFilter
-//    }
+    @Bean
+    fun tokenAuthenticationFilter(http: HttpSecurity): TokenAuthenticationFilter {
+        val tokenAuthenticationFilter = TokenAuthenticationFilter(
+            accessTokenResolver = accessTokenManager,
+            refreshTokenResolver = refreshTokenManager,
+        )
+
+        tokenAuthenticationFilter.setAuthenticationManager(apiAuthenticationManager(http))
+        tokenAuthenticationFilter.setAuthenticationSuccessHandler(apiAuthenticationSuccessHandler())
+        tokenAuthenticationFilter.setAuthenticationFailureHandler(apiAuthenticationFailureHandler())
+
+        return tokenAuthenticationFilter
+    }
 
     @Bean
     fun apiAuthenticationManager(http: HttpSecurity): AuthenticationManager {
         val authenticationManagerBuilder = http.getSharedObject(AuthenticationManagerBuilder::class.java)
         authenticationManagerBuilder.userDetailsService(jpaUserDetailsService())
+        authenticationManagerBuilder.authenticationProvider(tokenAuthenticationProvider())
         return authenticationManagerBuilder.build()
+    }
+
+    @Bean
+    fun tokenAuthenticationProvider(): TokenAuthenticationProvider {
+        return TokenAuthenticationProvider(
+            accessTokenDecoder = accessTokenManager,
+            refreshTokenDecoder = refreshTokenManager,
+        )
     }
 
     @Bean
@@ -98,7 +119,14 @@ class SecurityConfig(
 
     @Bean
     fun apiAuthenticationSuccessHandler(): AuthenticationSuccessHandler {
-        return ApiAuthenticationSuccessHandler(objectMapper)
+        return ApiAuthenticationSuccessHandler(
+            apiLoginRequestMatcher = AntPathRequestMatcher(apiAuthenticationUrl, "POST"),
+            objectMapper = objectMapper,
+            accessTokenGenerator = accessTokenManager,
+            refreshTokenGenerator = refreshTokenManager,
+            refreshTokenRepository = refreshTokenRepository,
+            accountRepository = accountRepository,
+        )
     }
 
     @Bean
@@ -109,6 +137,11 @@ class SecurityConfig(
     @Bean
     fun changeToReReadableRequestFilter(): GenericFilterBean {
         return ChangeToReReadableRequestFilter()
+    }
+
+    @Bean
+    fun authenticationEntrypoint(): AuthenticationEntryPoint {
+        return TokenAuthenticationEntrypoint(objectMapper = objectMapper)
     }
 
 }

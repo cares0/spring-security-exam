@@ -1,4 +1,4 @@
-package me.cares.securityexam.security.authentication
+package me.cares.securityexam.security.authentication.api
 
 data class ApiAuthenticationRequest(
     val email: String,

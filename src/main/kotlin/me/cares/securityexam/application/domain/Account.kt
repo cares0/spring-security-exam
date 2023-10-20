@@ -1,7 +1,9 @@
 package me.cares.securityexam.application.domain
 
 import jakarta.persistence.*
+import jakarta.persistence.CascadeType.*
 import jakarta.persistence.EnumType.*
+import jakarta.persistence.FetchType.*
 import jakarta.persistence.GenerationType.*
 import me.cares.securityexam.application.domain.exception.RoleUpdateNotAllowedException
 import java.time.LocalDate
@@ -57,7 +59,7 @@ class Account private constructor(
                 name = name,
                 password = encodedPassword,
                 email = email,
-                role = getRoleFromEmail(email)
+                role = getRoleFromEmail(email),
             )
 
         }

@@ -2,17 +2,19 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://localhost:3306/spring_security_exam
+#    username: user
+#    password: 11111
+
     url: jdbc:mysql://localhost:3306/spring_security_exam
-    username: user
+    username: root
     password: 11111
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: update
     properties:
       hibernate:
-        show_sql: true
-        format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
   security:

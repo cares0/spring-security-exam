@@ -2,6 +2,7 @@ package me.cares.securityexam.application.service
 
 import jakarta.transaction.Transactional
 import me.cares.securityexam.application.domain.Account
+import me.cares.securityexam.application.domain.RefreshToken
 import me.cares.securityexam.persistence.findByIdOrThrow
 import me.cares.securityexam.persistence.AccountRepository
 import org.springframework.security.crypto.password.PasswordEncoder

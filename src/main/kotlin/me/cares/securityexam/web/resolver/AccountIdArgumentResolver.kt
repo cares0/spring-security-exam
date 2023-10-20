@@ -1,5 +1,6 @@
 package me.cares.securityexam.web.resolver
 
+import me.cares.securityexam.security.authentication.api.CustomUserDetails
 import org.springframework.core.MethodParameter
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Component
@@ -26,8 +27,11 @@ class AccountIdArgumentResolver : HandlerMethodArgumentResolver {
     ): Any {
         val principal = SecurityContextHolder.getContext().authentication.principal
 
-        if (principal is UUID) return principal
-        else throw UnsupportedPrincipalException()
-
+        return when (principal) {
+            is UUID -> principal
+            is CustomUserDetails -> principal.id
+            is String -> UUID.fromString(principal)
+            else -> throw UnsupportedPrincipalException()
+        }
     }
 }

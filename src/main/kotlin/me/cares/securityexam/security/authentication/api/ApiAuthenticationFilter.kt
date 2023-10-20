@@ -1,7 +1,10 @@
-package me.cares.securityexam.security.authentication
+package me.cares.securityexam.security.authentication.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.springframework.security.core.Authentication
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 
 class ApiAuthenticationFilter(

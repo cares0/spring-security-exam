@@ -1,5 +1,8 @@
 package me.cares.securityexam.web
 
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
+import jakarta.servlet.http.HttpServletRequest
 import me.cares.securityexam.application.domain.Account
 import me.cares.securityexam.application.service.AccountService
 import me.cares.securityexam.persistence.AccountRepository
@@ -35,6 +38,7 @@ class AccountController(
         @RequestBody request: AccountRoleUpgradeRequest,
     ): ApiResponse<Any> {
         accountService.upgradeToExpert(request.targetAccountId)
+
 
         return ApiResponse.ofSuccess()
     }

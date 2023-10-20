@@ -1,13 +1,16 @@
-package me.cares.securityexam.security.authentication
+package me.cares.securityexam.security.authentication.api
 
 import me.cares.securityexam.application.domain.AccountRole
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.userdetails.UserDetails
+import java.util.UUID
 
 data class CustomUserDetails(
 
-    val email: String,
+    val id: UUID,
+
+    val email: String?,
 
     @get: JvmName("getPasswordKt")
     val password: String,
@@ -25,7 +28,7 @@ data class CustomUserDetails(
     }
 
     override fun getUsername(): String {
-        return email
+        return id.toString()
     }
 
     override fun isAccountNonExpired(): Boolean {

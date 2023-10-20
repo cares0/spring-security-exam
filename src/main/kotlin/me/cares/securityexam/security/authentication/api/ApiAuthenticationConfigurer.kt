@@ -1,7 +1,6 @@
-package me.cares.securityexam.security.config
+package me.cares.securityexam.security.authentication.api
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import me.cares.securityexam.security.authentication.ApiAuthenticationFilter
 import org.springframework.security.config.annotation.web.HttpSecurityBuilder
 import org.springframework.security.config.annotation.web.configurers.AbstractAuthenticationFilterConfigurer
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
