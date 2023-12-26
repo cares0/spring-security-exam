@@ -7,7 +7,7 @@ enum class Token(
 
     ACCESS(
         secretKey = "accessTokenSecretaccessTokenSecretaccessTokenSecretaccessTokenSecret",
-        expirationTimeInSecond = 1
+        expirationTimeInSecond = 7 * 24 * 60 * 60
     ),
 
     REFRESH(

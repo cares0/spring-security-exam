@@ -2,28 +2,39 @@ package me.cares.securityexam.security.config
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.servlet.DispatcherType
+import jakarta.servlet.http.HttpServletRequest
+import me.cares.securityexam.application.domain.AccountRole
+import me.cares.securityexam.application.domain.ResourceAuthority
 import me.cares.securityexam.persistence.AccountRepository
 import me.cares.securityexam.persistence.RefreshTokenRepository
+import me.cares.securityexam.persistence.ResourceAuthorityRepository
 import me.cares.securityexam.security.TokenAuthenticationEntrypoint
 import me.cares.securityexam.security.authentication.api.*
 import me.cares.securityexam.security.authentication.token.*
+import me.cares.securityexam.security.authorization.CustomAuthorizationFilter
+import me.cares.securityexam.security.authorization.DynamicResourceAuthorizationManager
 import me.cares.securityexam.security.requestwraping.ChangeToReReadableRequestFilter
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder
 import org.springframework.security.crypto.factory.PasswordEncoderFactories
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.AuthenticationEntryPoint
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.access.intercept.AuthorizationFilter
 import org.springframework.security.web.authentication.AuthenticationFailureHandler
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher
+import org.springframework.security.web.util.matcher.RegexRequestMatcher
 import org.springframework.web.filter.GenericFilterBean
 
 @Configuration
@@ -32,6 +43,7 @@ class SecurityConfig(
     private val objectMapper: ObjectMapper,
     private val accountRepository: AccountRepository,
     private val refreshTokenRepository: RefreshTokenRepository,
+    private val resourceAuthorityRepository: ResourceAuthorityRepository,
 
     private val accessTokenManager: AccessTokenManager,
     private val refreshTokenManager: RefreshTokenManager,
@@ -51,13 +63,6 @@ class SecurityConfig(
             sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
         }
 
-        http.authorizeHttpRequests { authorize ->
-            authorize.dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-            authorize.requestMatchers(apiAuthenticationUrl).permitAll()
-            authorize.requestMatchers("/accounts/join").permitAll()
-            authorize.anyRequest().hasAuthority("NORMAL")
-        }
-
         http.authenticationManager(apiAuthenticationManager(http))
 
         http.apply(ApiAuthenticationConfigurer(objectMapper))
@@ -66,15 +71,25 @@ class SecurityConfig(
             .failureHandler(apiAuthenticationFailureHandler())
             .authenticationDetailsSource(WebAuthenticationDetailsSource())
 
-
         http.exceptionHandling { exceptionHandling ->
             exceptionHandling.authenticationEntryPoint(authenticationEntrypoint())
         }
 
         http.addFilterBefore(changeToReReadableRequestFilter(), ApiAuthenticationFilter::class.java)
         http.addFilterAfter(tokenAuthenticationFilter(http), ApiAuthenticationFilter::class.java)
+        http.addFilterAt(authorizationFilter(), AuthorizationFilter::class.java)
 
         return http.build()
+    }
+
+    @Bean
+    fun authorizationFilter(): AuthorizationFilter {
+        return CustomAuthorizationFilter(dynamicResourceAuthorizationManager())
+    }
+
+    @Bean
+    fun dynamicResourceAuthorizationManager(): AuthorizationManager<HttpServletRequest> {
+        return DynamicResourceAuthorizationManager(resourceAuthorityRepository)
     }
 
     @Bean

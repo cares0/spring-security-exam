@@ -17,6 +17,7 @@ import me.cares.securityexam.security.authentication.token.exception.InvalidToke
 import me.cares.securityexam.security.authentication.token.exception.InvalidTokenException
 import me.cares.securityexam.security.authentication.token.exception.UnavailableTokenException
 import org.springframework.stereotype.Component
+import java.lang.NullPointerException
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.*
@@ -39,8 +40,13 @@ class RefreshTokenManager(
         return refreshTokenCookie.value
     }
 
-    private fun findRefreshTokenCookie(request: HttpServletRequest) =
-        request.cookies.firstOrNull { it.name == refreshTokenCookieName }
+    private fun findRefreshTokenCookie(request: HttpServletRequest): Cookie? {
+        return try {
+            request.cookies.firstOrNull { it.name == refreshTokenCookieName }
+        } catch (npe: NullPointerException) {
+            null
+        }
+    }
 
     override fun decodeToUserDetails(rawToken: String): CustomUserDetails {
         return try {
